@@ -1,0 +1,54 @@
+# North Automation Contract (Safe Mode)
+# Defines the boundaries for automated agent operations.
+
+version: 1.0
+
+rules:
+  - name: "No Direct Main Commits"
+    description: "All changes must be on a new branch and delivered via PR."
+    enforcement: "Strict"
+
+  - name: "No Dependency Mutation"
+    description: "Never modify package.json or lockfiles."
+    enforcement: "Strict"
+
+  - name: "No Secret Exposure"
+    description: "Never touch .env files or print environment variables."
+    enforcement: "Strict"
+
+boundaries:
+  forbidden_paths:
+    - "supabase/functions/**"
+    - "supabase/migrations/**"
+    - "PIPELINE_STANDARDIZATION.sql"
+    - "COMPLETE_SCHEMA_INIT.sql"
+    - "lib/auth/**"
+    - "lib/guest_token.ts"
+    - "package.json"
+    - "package-lock.json"
+    - ".env*"
+    - ".github/workflows/agent-dispatch.yml" # Protection against self-modification
+
+  safe_auto_merge_paths:
+    - "components/**"
+    - "app/(tabs)/**"
+    - "app/history.tsx"
+    - "app/results.tsx"
+    - "lib/haptics.ts"
+    - "docs/**"
+    - "**/*.md"
+
+execution_budgets:
+  max_retries: 2
+  recursion: false
+  max_steps_per_task: 40
+
+task_requirements:
+  - "file_allowlist"
+  - "acceptance_criteria"
+  - "test_plan"
+  - "rollback_note"
+
+protocol_locked_semantics:
+  checkpoint_stages: [15, 45, 70, 92]
+  self_heal_threshold_ms: 3000
