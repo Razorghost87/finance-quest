@@ -1,7 +1,10 @@
+import { Colors } from '@/constants/theme';
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { ConfidenceBadge } from './ConfidenceBadge';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
+import { NorthStarIcon } from './ui/NorthStarIcon';
 
 interface NorthStarCardProps {
   netCashflow: number;
@@ -19,26 +22,37 @@ export function NorthStarCard({ netCashflow, confidence, reconciliation }: North
   const isPositive = netCashflow >= 0;
   const confidenceGrade = confidence?.grade || 'medium';
   const reconOk = reconciliation?.ok;
-
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.label}>North Star</ThemedText>
-      <ThemedText style={styles.metricLabel}>Savings Trajectory</ThemedText>
+      {/* Aurora Glow Effect */}
+      <View style={styles.glow} />
+
+      <View style={styles.labelRow}>
+        <NorthStarIcon size={14} color={Colors.aurora.faint} />
+        <ThemedText style={styles.label}>NORTH STAR</ThemedText>
+      </View>
+      <View style={styles.headerRow}>
+        <ThemedText style={styles.metricLabel}>Savings Trajectory</ThemedText>
+        {isPositive && <View style={styles.trendIndicator} />}
+      </View>
+
       <ThemedText style={[styles.metric, isPositive ? styles.positive : styles.negative]}>
-        {isPositive ? '+' : ''}${Math.abs(netCashflow).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+        {isPositive ? '+' : ''}${Math.abs(netCashflow).toLocaleString(undefined, { maximumFractionDigits: 0 })}
       </ThemedText>
+
       <View style={styles.badges}>
-        {confidenceGrade && (
-          <View style={[styles.badge, styles[`badge${confidenceGrade.charAt(0).toUpperCase() + confidenceGrade.slice(1)}`]]}>
-            <ThemedText style={styles.badgeText}>
-              {confidenceGrade === 'high' ? '✓ High' : confidenceGrade === 'medium' ? '~ Medium' : '? Low'} Confidence
-            </ThemedText>
-          </View>
+        {confidence && (
+          <ConfidenceBadge
+            score={confidence.score}
+            grade={confidenceGrade}
+            showLabel={true}
+          />
         )}
+
         {reconOk !== null && reconOk !== undefined && (
           <View style={[styles.badge, reconOk ? styles.badgeGood : styles.badgeWarning]}>
             <ThemedText style={styles.badgeText}>
-              {reconOk ? '✓ Reconciled' : `Δ $${Math.abs(reconciliation?.delta || 0).toFixed(2)}`}
+              {reconOk ? 'Reconciled' : `Δ $${Math.abs(reconciliation?.delta || 0).toFixed(2)}`}
             </ThemedText>
           </View>
         )}
@@ -50,70 +64,105 @@ export function NorthStarCard({ netCashflow, confidence, reconciliation }: North
 const styles = StyleSheet.create({
   container: {
     padding: 24,
-    borderRadius: 16,
-    backgroundColor: '#1a1a1a',
+    borderRadius: 24,
+    backgroundColor: Colors.aurora.card,
     borderWidth: 1,
-    borderColor: '#2a2a2a',
+    borderColor: Colors.aurora.border,
     marginBottom: 20,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  glow: {
+    position: 'absolute',
+    top: -50,
+    left: -50,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(59, 227, 255, 0.08)', // Faint cyan glow
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#888',
-    marginBottom: 8,
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.aurora.faint,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 2,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   metricLabel: {
-    fontSize: 16,
-    color: '#ccc',
-    marginBottom: 12,
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.aurora.text,
+  },
+  trendIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.aurora.green,
+    marginLeft: 8,
+    marginTop: 2,
   },
   metric: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontSize: 56,
+    fontWeight: '900', // Heavy impact
+    marginBottom: 20,
+    letterSpacing: -2,
+    marginTop: 8,
   },
   positive: {
-    color: '#4ade80',
+    color: Colors.aurora.green,
+    textShadowColor: 'rgba(56, 255, 179, 0.3)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 15,
   },
   negative: {
-    color: '#f87171',
+    color: Colors.aurora.red,
   },
   badges: {
     flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
+    gap: 10,
+    alignItems: 'center',
   },
   badge: {
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderRadius: 999,
     borderWidth: 1,
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.aurora.text,
   },
   badgeHigh: {
-    borderColor: '#4ade80',
-    backgroundColor: '#1a2e1a',
+    borderColor: 'rgba(56, 255, 179, 0.3)',
+    backgroundColor: 'rgba(56, 255, 179, 0.05)',
   },
   badgeMedium: {
-    borderColor: '#fbbf24',
-    backgroundColor: '#2e2a1a',
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+    backgroundColor: 'rgba(251, 191, 36, 0.05)',
   },
   badgeLow: {
-    borderColor: '#f87171',
-    backgroundColor: '#2e1a1a',
+    borderColor: 'rgba(248, 113, 113, 0.3)',
+    backgroundColor: 'rgba(248, 113, 113, 0.05)',
   },
   badgeGood: {
-    borderColor: '#4ade80',
-    backgroundColor: '#1a2e1a',
+    borderColor: Colors.aurora.border,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
   },
   badgeWarning: {
-    borderColor: '#fbbf24',
-    backgroundColor: '#2e2a1a',
+    borderColor: 'rgba(251, 191, 36, 0.3)',
+    backgroundColor: 'rgba(251, 191, 36, 0.05)',
   },
 });
 

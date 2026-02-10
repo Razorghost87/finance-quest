@@ -1,8 +1,11 @@
+import { ConfidenceBadge } from '@/components/ConfidenceBadge';
 import { NorthStarCard } from '@/components/NorthStarCard';
 import { SubscriptionsCard } from '@/components/SubscriptionsCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TrustPanel } from '@/components/TrustPanel';
+import { AuroraBackground } from '@/components/ui/AuroraBackground';
+import { Colors } from '@/constants/theme';
 import { getGuestToken } from '@/lib/guest-token';
 import { ensureSupabaseConfigured } from '@/lib/supabase';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -31,16 +34,16 @@ interface FreeSummary {
     outflow: number;     // should be positive number (absolute)
     netCashflow: number; // can be negative
   };
-  topCategories: Array<{ name: string; amount: number }>; // amount positive
+  topCategories: { name: string; amount: number }[]; // amount positive
   insights: string[];
   flag: string | null;
-  subscriptions?: Array<{
+  subscriptions?: {
     merchant: string;
     amount: number;
     interval: string;
     confidence: number;
     nextExpectedDate?: string | null;
-  }>;
+  }[];
   confidence?: {
     score: number;
     grade: 'high' | 'medium' | 'low';
@@ -75,6 +78,18 @@ export default function ResultsScreen() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<FreeSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  const checkSession = async () => {
+    const supabase = ensureSupabaseConfigured();
+    const { data } = await supabase.auth.getSession();
+    if (data.session) setIsUnlocked(true);
+  };
 
   useEffect(() => {
     if (uploadId) fetchSummary();
@@ -89,22 +104,28 @@ export default function ResultsScreen() {
     try {
       const supabase = ensureSupabaseConfigured();
       const guestToken = await getGuestToken();
-      if (!guestToken) throw new Error('Guest token not found');
 
-      // Fetch by upload_id directly (most reliable)
-      const { data: extract, error: extractError } = await supabase
-        .from('statement_extract')
-        .select('free_summary')
-        .eq('upload_id', uploadId)
-        .eq('guest_token', guestToken)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+      if (!guestToken) {
+        throw new Error('Guest token not found');
+      }
 
-      if (extractError) throw new Error(`Failed to fetch summary: ${extractError.message}`);
-      if (!extract?.free_summary) throw new Error('No summary data found');
+      const { data, error } = await supabase.rpc(
+        'get_guest_free_summary',
+        { p_guest_token: guestToken }
+      );
 
-      setSummary(extract.free_summary as FreeSummary);
+      if (error) {
+        throw error;
+      }
+
+      // Supabase RPC returns an array for SETOF
+      const latestSummary = Array.isArray(data) ? data[0] : data;
+
+      if (!latestSummary || Object.keys(latestSummary).length === 0) {
+        throw new Error('No summary data found');
+      }
+
+      setSummary(latestSummary as FreeSummary);
     } catch (err) {
       console.error('Error fetching summary:', err);
       setError(err instanceof Error ? err.message : 'Failed to load summary');
@@ -145,20 +166,39 @@ export default function ResultsScreen() {
 
   const handleUnlockFullReport = () => router.push('/paywall');
 
+  const handleSaveToPortfolio = async () => {
+    try {
+      setSaving(true);
+      const supabase = ensureSupabaseConfigured();
+      const guestToken = await getGuestToken();
+      if (!guestToken) throw new Error("No guest token");
+
+      // Call RPC
+      const { error } = await supabase.rpc('migrate_guest_data', { p_guest_token: guestToken });
+      if (error) throw error;
+
+      router.replace('/(tabs)/history');
+    } catch (e: any) {
+      alert("Failed to save: " + e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
-      <ThemedView style={styles.container}>
+      <AuroraBackground>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={AURORA.cyan} />
+          <ActivityIndicator size="large" color={Colors.aurora.cyan} />
           <ThemedText style={styles.loadingText}>Loading results...</ThemedText>
         </View>
-      </ThemedView>
+      </AuroraBackground>
     );
   }
 
   if (error || !summary || !ui) {
     return (
-      <ThemedView style={styles.container}>
+      <AuroraBackground>
         <View style={styles.content}>
           <ThemedText type="title" style={styles.title}>
             Error
@@ -170,7 +210,7 @@ export default function ResultsScreen() {
             <ThemedText style={styles.buttonText}>Go Back</ThemedText>
           </Pressable>
         </View>
-      </ThemedView>
+      </AuroraBackground>
     );
   }
 
@@ -178,31 +218,29 @@ export default function ResultsScreen() {
   const netSign = ui.net >= 0 ? '' : '-';
 
   return (
-    <ThemedView style={styles.container}>
+    <AuroraBackground>
       {/* Aurora header */}
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View>
             <ThemedText type="title" style={styles.title}>
-              Free Report
+              north report
             </ThemedText>
             <ThemedText style={styles.period}>{summary.period}</ThemedText>
           </View>
 
           {/* Quality pills */}
           <View style={styles.pills}>
-            {ui.conf != null && (
-              <View style={[styles.pill, ui.conf >= 0.75 ? styles.pillGood : ui.conf >= 0.5 ? styles.pillMid : styles.pillBad]}>
-                <ThemedText style={styles.pillText}>
-                  Confidence {Math.round(ui.conf * 100)}%
-                </ThemedText>
-              </View>
-            )}
+            <ConfidenceBadge
+              score={ui.conf ?? undefined}
+              grade={summary.confidence?.grade}
+              showLabel={true}
+            />
 
             {ui.recon?.ok != null && (
               <View style={[styles.pill, ui.recon.ok ? styles.pillGood : styles.pillBad]}>
                 <ThemedText style={styles.pillText}>
-                  {ui.recon.ok ? 'Reconciled' : `Recon Δ ${ui.recon.delta != null ? formatMoney2(ui.recon.delta) : '?'}`}
+                  {ui.recon.ok ? 'Reconciled' : `Diff Δ ${ui.recon.delta != null ? formatMoney2(ui.recon.delta) : '?'}`}
                 </ThemedText>
               </View>
             )}
@@ -297,7 +335,7 @@ export default function ResultsScreen() {
               <View style={styles.noticeBox}>
                 <ThemedText style={styles.noticeTitle}>Accuracy note</ThemedText>
                 <ThemedText style={styles.noticeText}>
-                  This report is best-effort. If transactions are missing or misclassified, use "Full Report" to review line items.
+                  This report is best-effort. If transactions are missing or misclassified, use &quot;Full Report&quot; to review line items.
                 </ThemedText>
               </View>
             )}
@@ -315,14 +353,20 @@ export default function ResultsScreen() {
         <TrustPanel confidence={summary.confidence} />
 
         {/* CTA */}
-        <Pressable style={styles.unlockButton} onPress={handleUnlockFullReport}>
-          <View style={styles.unlockGlow} />
-          <ThemedText style={styles.unlockButtonText}>Unlock Full Report & Save</ThemedText>
-        </Pressable>
+        {!isUnlocked ? (
+          <Pressable style={styles.unlockButton} onPress={handleUnlockFullReport}>
+            <View style={styles.unlockGlow} />
+            <ThemedText style={styles.unlockButtonText}>Unlock Full Report & Save</ThemedText>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.saveButton} onPress={handleSaveToPortfolio} disabled={saving}>
+            <ThemedText style={styles.saveButtonText}>{saving ? "Saving..." : "Save to Portfolio"}</ThemedText>
+          </Pressable>
+        )}
 
         <View style={{ height: 18 }} />
       </ScrollView>
-    </ThemedView>
+    </AuroraBackground>
   );
 }
 
@@ -345,31 +389,16 @@ function Row({
   );
 }
 
-// Aurora palette (no gradients needed; we fake aurora with layered glows)
-const AURORA = {
-  bg: '#05060A',
-  card: '#0B0D14',
-  border: 'rgba(255,255,255,0.08)',
-  text: 'rgba(255,255,255,0.92)',
-  muted: 'rgba(255,255,255,0.65)',
-  faint: 'rgba(255,255,255,0.45)',
-  cyan: '#3BE3FF',
-  green: '#38FFB3',
-  purple: '#A78BFA',
-  red: '#FF4D4D',
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: AURORA.bg,
   },
 
   header: {
     padding: 22,
     paddingTop: 58,
     borderBottomWidth: 1,
-    borderBottomColor: AURORA.border,
+    borderBottomColor: Colors.aurora.border,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -381,12 +410,12 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '800',
     letterSpacing: -0.6,
-    color: AURORA.text,
+    color: Colors.aurora.text,
   },
   period: {
     marginTop: 6,
     fontSize: 15,
-    color: AURORA.muted,
+    color: Colors.aurora.muted,
   },
 
   pills: {
@@ -403,70 +432,12 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: AURORA.text,
+    color: Colors.aurora.text,
     opacity: 0.9,
   },
-  pillGood: { borderColor: 'rgba(56,255,179,0.55)' },
+  pillGood: { borderColor: 'rgba(56,255,179,0.55)' }, // Hardcoded for now unless added to theme
   pillMid: { borderColor: 'rgba(59,227,255,0.45)' },
   pillBad: { borderColor: 'rgba(255,77,77,0.55)' },
-
-  northStarCard: {
-    marginTop: 18,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: AURORA.border,
-    backgroundColor: AURORA.card,
-    overflow: 'hidden',
-    padding: 18,
-  },
-  northStarGlow: {
-    position: 'absolute',
-    top: -40,
-    left: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 220,
-    backgroundColor: 'rgba(59,227,255,0.14)',
-  },
-  northStarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  northStarLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: AURORA.faint,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-  },
-  northStarValue: {
-    marginTop: 6,
-    fontSize: 38,
-    fontWeight: '900',
-    letterSpacing: -1.2,
-    color: AURORA.text,
-  },
-  northStarSubtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    color: AURORA.muted,
-  },
-  northStarBadge: {
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.45)',
-    backgroundColor: 'rgba(167,139,250,0.08)',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  northStarBadgeText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: AURORA.text,
-    opacity: 0.9,
-    letterSpacing: 0.6,
-  },
 
   scrollView: { flex: 1 },
   scrollContent: {
@@ -475,11 +446,11 @@ const styles = StyleSheet.create({
   },
 
   card: {
-    backgroundColor: AURORA.card,
+    backgroundColor: Colors.aurora.card,
     borderRadius: 18,
     padding: 18,
     borderWidth: 1,
-    borderColor: AURORA.border,
+    borderColor: Colors.aurora.border,
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -490,11 +461,11 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: AURORA.text,
+    color: Colors.aurora.text,
   },
   cardHint: {
     fontSize: 13,
-    color: AURORA.muted,
+    color: Colors.aurora.muted,
   },
 
   miniChip: {
@@ -508,7 +479,7 @@ const styles = StyleSheet.create({
   miniChipText: {
     fontSize: 12,
     fontWeight: '700',
-    color: AURORA.text,
+    color: Colors.aurora.text,
     opacity: 0.85,
   },
 
@@ -521,21 +492,21 @@ const styles = StyleSheet.create({
   rowStrong: {
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: AURORA.border,
+    borderTopColor: Colors.aurora.border,
     marginTop: 2,
   },
   rowLabel: {
     fontSize: 15,
-    color: AURORA.muted,
+    color: Colors.aurora.muted,
   },
   rowValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: AURORA.text,
+    color: Colors.aurora.text,
   },
 
-  valueGood: { color: AURORA.green },
-  valueBad: { color: AURORA.red },
+  valueGood: { color: Colors.aurora.green },
+  valueBad: { color: Colors.aurora.red },
 
   catRow: {
     paddingVertical: 2,
@@ -549,12 +520,12 @@ const styles = StyleSheet.create({
   catName: {
     fontSize: 15,
     fontWeight: '700',
-    color: AURORA.text,
+    color: Colors.aurora.text,
   },
   catAmount: {
     fontSize: 14,
     fontWeight: '800',
-    color: AURORA.text,
+    color: Colors.aurora.text,
     opacity: 0.9,
   },
   barTrack: {
@@ -587,7 +558,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     lineHeight: 22,
-    color: AURORA.text,
+    color: Colors.aurora.text,
     opacity: 0.9,
   },
 
@@ -602,13 +573,13 @@ const styles = StyleSheet.create({
   noticeTitle: {
     fontSize: 13,
     fontWeight: '900',
-    color: AURORA.text,
+    color: Colors.aurora.text,
     marginBottom: 6,
     opacity: 0.9,
   },
   noticeText: {
     fontSize: 13,
-    color: AURORA.muted,
+    color: Colors.aurora.muted,
     lineHeight: 19,
   },
 
@@ -622,7 +593,7 @@ const styles = StyleSheet.create({
   flagText: {
     fontSize: 14,
     fontWeight: '800',
-    color: AURORA.red,
+    color: Colors.aurora.red,
   },
 
   unlockButton: {
@@ -648,17 +619,17 @@ const styles = StyleSheet.create({
   unlockButtonText: {
     fontSize: 17,
     fontWeight: '900',
-    color: AURORA.text,
+    color: Colors.aurora.text,
     letterSpacing: 0.2,
   },
 
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 16, color: AURORA.muted },
+  loadingText: { marginTop: 16, color: Colors.aurora.muted },
 
   content: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   errorText: {
     fontSize: 16,
-    color: AURORA.muted,
+    color: Colors.aurora.muted,
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -670,5 +641,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     borderRadius: 14,
   },
-  buttonText: { color: AURORA.text, fontSize: 16, fontWeight: '800' },
+  buttonText: { color: Colors.aurora.text, fontSize: 16, fontWeight: '800' },
+  saveButton: {
+    backgroundColor: Colors.aurora.green,
+    borderRadius: 18,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginBottom: 20,
+    shadowColor: Colors.aurora.green,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  saveButtonText: {
+    color: '#000',
+    fontSize: 17,
+    fontWeight: '700',
+  },
 });

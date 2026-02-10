@@ -1,145 +1,222 @@
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { AuroraBackground } from '@/components/ui/AuroraBackground';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Colors } from '@/constants/theme';
+import { useUserTier } from '@/hooks/use-user-tier';
+import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 export default function ProfileScreen() {
+  const tier = useUserTier();
+  const isPaid = tier === 'north_star';
+
   const handleCreateAccount = () => {
-    // Navigate to account creation (to be implemented)
-    alert('Account creation will be implemented here');
+    router.push('/auth/login');
+  };
+
+  const handleUpgrade = () => {
+    router.push('/paywall');
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <AuroraBackground tier={tier}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <ThemedText type="title" style={styles.title}>
-          Profile
-        </ThemedText>
 
-        <ThemedView style={styles.guestCard}>
-          <ThemedText type="subtitle" style={styles.guestTitle}>
-            Guest Mode
-          </ThemedText>
-          <ThemedText style={styles.guestText}>
-            You&apos;re currently using the app as a guest. Your data is stored locally and will not be synced across devices.
-          </ThemedText>
-        </ThemedView>
-
-        <ThemedView style={styles.privacyCard}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Privacy & Security
-          </ThemedText>
-          <ThemedText style={styles.privacyText}>
-            • Your financial data is processed securely{'\n'}
-            • Documents are stored privately in your account{'\n'}
-            • No data is shared with third parties{'\n'}
-            • You can delete your data at any time
-          </ThemedText>
-        </ThemedView>
-
-        <Pressable style={styles.createAccountButton} onPress={handleCreateAccount}>
-          <ThemedText style={styles.createAccountButtonText}>
-            Create Account to Save & Track
-          </ThemedText>
-        </Pressable>
-
-        <ThemedView style={styles.benefitsCard}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            With an account, you can:
-          </ThemedText>
-          <View style={styles.benefitsList}>
-            <ThemedText style={styles.benefitItem}>✓ Save your reports and history</ThemedText>
-            <ThemedText style={styles.benefitItem}>✓ Track spending month-to-month</ThemedText>
-            <ThemedText style={styles.benefitItem}>✓ Set and monitor financial goals</ThemedText>
-            <ThemedText style={styles.benefitItem}>✓ Get personalized insights</ThemedText>
-            <ThemedText style={styles.benefitItem}>✓ Sync across all your devices</ThemedText>
+        {/* Profile Header */}
+        <View style={styles.header}>
+          <View style={[styles.avatarPlaceholder, isPaid && styles.avatarPaid]}>
+            <IconSymbol name={isPaid ? "star.fill" : "person.fill"} size={40} color={isPaid ? Colors.aurora.green : Colors.aurora.text} />
           </View>
-        </ThemedView>
+          <View style={styles.headerTexts}>
+            <ThemedText type="title" style={styles.name}>{isPaid ? 'North Star Guide' : 'Guest Voyager'}</ThemedText>
+            <View style={[styles.badge, isPaid && styles.badgePaid]}>
+              <ThemedText style={[styles.badgeText, isPaid && styles.badgeTextPaid]}>
+                {isPaid ? 'Premium Access' : 'Start Here'}
+              </ThemedText>
+            </View>
+          </View>
+        </View>
+
+        {/* Action Card: Sign Up or Upgrade */}
+        {!isPaid ? (
+          <View style={styles.promoCard}>
+            <View style={styles.promoContent}>
+              <ThemedText style={styles.promoTitle}>Claim your North Star</ThemedText>
+              <ThemedText style={styles.promoDesc}>
+                Create an account to save your history, track trends, and unlock personalized insights.
+              </ThemedText>
+            </View>
+            <Pressable style={styles.ctaButton} onPress={handleCreateAccount}>
+              <ThemedText style={styles.ctaText}>Create Account</ThemedText>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={styles.statsCard}>
+            <ThemedText style={styles.statsTitle}>Lifetime Impact</ThemedText>
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <ThemedText style={styles.statValue}>Active</ThemedText>
+                <ThemedText style={styles.statLabel}>Status</ThemedText>
+              </View>
+              <View style={styles.statLine} />
+              <View style={styles.statItem}>
+                <ThemedText style={styles.statValue}>∞ </ThemedText>
+                <ThemedText style={styles.statLabel}>Uploads</ThemedText>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Menu Links */}
+        <View style={styles.menu}>
+          <MenuItem
+            icon="clock"
+            label="Financial History"
+            onPress={() => router.push('/history')}
+            subtitle="View past statements"
+          />
+          {!isPaid && (
+            <MenuItem
+              icon="star"
+              label="Upgrade to North Star"
+              onPress={handleUpgrade}
+              subtitle="Unlock full potential"
+              isHighlight
+            />
+          )}
+          <MenuItem
+            icon="gear"
+            label="Settings"
+            onPress={() => { }}
+            subtitle="App preferences"
+          />
+          <MenuItem
+            icon="shield"
+            label="Privacy & Security"
+            onPress={() => { }}
+            subtitle="Your data is encrypted"
+          />
+        </View>
+
+        <View style={styles.footer}>
+          <ThemedText style={styles.version}>North v1.0.0 (Orbit 8)</ThemedText>
+        </View>
+
       </ScrollView>
-    </ThemedView>
+    </AuroraBackground>
   );
 }
 
+function MenuItem({ icon, label, subtitle, onPress, isHighlight }: { icon: string, label: string, subtitle?: string, onPress: () => void, isHighlight?: boolean }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.menuItem, isHighlight && styles.menuItemHighlight, pressed && styles.menuItemPressed]}
+      onPress={onPress}
+    >
+      <View style={[styles.menuIconBox, isHighlight && styles.iconHighlight]}>
+        <IconSymbol name={icon as any} size={20} color={isHighlight ? '#000' : Colors.aurora.cyan} />
+      </View>
+      <View style={styles.menuTexts}>
+        <ThemedText style={[styles.menuLabel, isHighlight && styles.textHighlight]}>{label}</ThemedText>
+        {subtitle && <ThemedText style={[styles.menuSubtitle, isHighlight && styles.textHighlight]}>{subtitle}</ThemedText>}
+      </View>
+      <IconSymbol name="chevron.right" size={14} color={isHighlight ? '#000' : Colors.aurora.muted} />
+    </Pressable>
+  )
+}
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000000',
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 24, paddingTop: 60, paddingBottom: 100 },
+
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 32 },
+  avatarPlaceholder: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 1, borderColor: Colors.aurora.border,
+    marginRight: 16,
   },
-  scrollView: {
-    flex: 1,
+  avatarPaid: {
+    borderColor: Colors.aurora.green,
+    backgroundColor: 'rgba(0, 255, 163, 0.1)',
   },
-  scrollContent: {
+  headerTexts: { flex: 1 },
+  name: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
+  badge: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 6,
+  },
+  badgePaid: {
+    backgroundColor: Colors.aurora.green,
+  },
+  badgeText: { fontSize: 12, color: Colors.aurora.muted, textTransform: 'uppercase' },
+  badgeTextPaid: { color: '#000', fontWeight: '700' },
+
+  promoCard: {
+    backgroundColor: 'rgba(56, 189, 248, 0.1)', // subtle blue tint
+    borderRadius: 20,
     padding: 24,
-    paddingTop: 60,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    marginBottom: 24,
-  },
-  guestCard: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 20,
+    marginBottom: 32,
     borderWidth: 1,
-    borderColor: '#333',
-    marginBottom: 16,
+    borderColor: 'rgba(56, 189, 248, 0.3)',
+    gap: 20,
   },
-  guestTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  guestText: {
-    fontSize: 15,
-    opacity: 0.8,
-    lineHeight: 22,
-  },
-  privacyCard: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#333',
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  privacyText: {
-    fontSize: 15,
-    opacity: 0.8,
-    lineHeight: 24,
-  },
-  createAccountButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
+  promoContent: { gap: 8 },
+  promoTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  promoDesc: { fontSize: 14, color: 'rgba(255,255,255,0.8)', lineHeight: 20 },
+  ctaButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 24,
   },
-  createAccountButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  benefitsCard: {
-    backgroundColor: '#1a1a1a',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  benefitsList: {
-    gap: 12,
-  },
-  benefitItem: {
-    fontSize: 15,
-    opacity: 0.9,
-    lineHeight: 22,
-  },
-});
+  ctaText: { color: '#000', fontWeight: '700', fontSize: 16 },
 
+  statsCard: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 32,
+    borderWidth: 1,
+    borderColor: Colors.aurora.border,
+  },
+  statsTitle: { fontSize: 14, color: Colors.aurora.muted, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
+  statItem: { alignItems: 'center' },
+  statValue: { fontSize: 24, fontWeight: '700', color: Colors.aurora.green },
+  statLabel: { fontSize: 12, color: Colors.aurora.muted, marginTop: 4 },
+  statLine: { width: 1, height: 30, backgroundColor: 'rgba(255,255,255,0.1)' },
+
+
+  menu: { gap: 12 },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  menuItemPressed: { backgroundColor: 'rgba(255,255,255,0.06)' },
+  menuItemHighlight: { backgroundColor: Colors.aurora.green, borderColor: Colors.aurora.green },
+  menuIconBox: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: 'rgba(0, 210, 255, 0.1)',
+    justifyContent: 'center', alignItems: 'center',
+    marginRight: 16,
+  },
+  iconHighlight: { backgroundColor: '#fff' },
+  textHighlight: { color: '#000' },
+
+  menuTexts: { flex: 1 },
+  menuLabel: { fontSize: 16, fontWeight: '600', color: Colors.aurora.text },
+  menuSubtitle: { fontSize: 13, color: Colors.aurora.muted, marginTop: 2 },
+
+  footer: { marginTop: 48, alignItems: 'center' },
+  version: { fontSize: 12, color: Colors.aurora.muted, opacity: 0.5 },
+});

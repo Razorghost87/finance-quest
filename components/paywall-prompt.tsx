@@ -1,8 +1,8 @@
-import { StyleSheet, View, Pressable } from 'react-native';
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { ThemedText } from './themed-text';
+import { ThemedView } from './themed-view';
 
 interface PaywallPromptProps {
   onDismiss: () => void;
@@ -20,7 +20,7 @@ export function PaywallPrompt({ onDismiss, onUpgrade }: PaywallPromptProps) {
           Unlock Full Access
         </ThemedText>
         <ThemedText style={styles.description}>
-          You've viewed your free summary. Upgrade to unlock:
+          You&apos;ve viewed your free summary. Upgrade to unlock:
         </ThemedText>
         <View style={styles.features}>
           <ThemedText style={styles.feature}>✓ Unlimited document uploads</ThemedText>

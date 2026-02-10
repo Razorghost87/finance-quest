@@ -10,21 +10,34 @@ const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    text: '#ECEDEE',
-    background: '#000000',
-    tint: '#007AFF',
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: '#007AFF',
+    text: '#FFFFFF',
+    background: '#000000', // Void
+    tint: '#00FFA3', // Aurora Green
+    icon: '#8E8E93',
+    tabIconDefault: '#8E8E93',
+    tabIconSelected: '#00FFA3',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#000000',
-    tint: '#007AFF',
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: '#007AFF',
+    text: '#FFFFFF',
+    background: '#000000', // Void
+    tint: '#00FFA3', // Aurora Green
+    icon: '#8E8E93',
+    tabIconDefault: '#8E8E93',
+    tabIconSelected: '#00FFA3',
   },
+  aurora: {
+    bg: '#000000',
+    card: '#0E0E0E', // Void Surface
+    border: 'rgba(255,255,255,0.08)',
+    text: '#FFFFFF',
+    muted: '#8E8E93',
+    faint: 'rgba(255,255,255,0.45)',
+    cyan: '#00D2FF', // Secondary Aurora
+    green: '#00FFA3', // Primary Aurora
+    purple: '#A78BFA',
+    red: '#FF4D4D',
+    yellow: '#FFC107', // Amber/Warning
+  }
 };
 
 export const Fonts = Platform.select({

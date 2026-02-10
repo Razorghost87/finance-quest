@@ -1,13 +1,19 @@
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { AuroraBackground } from '@/components/ui/AuroraBackground';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { NorthStarIcon } from '@/components/ui/NorthStarIcon';
+import { Colors } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PaywallScreen() {
+  const insets = useSafeAreaInsets();
+
   const handleCreateAccount = () => {
-    // Navigate to account creation (to be implemented)
-    alert('Account creation will be implemented here');
+    router.push('/auth/sign-up');
   };
 
   const handleBack = () => {
@@ -15,74 +21,65 @@ export default function PaywallScreen() {
   };
 
   return (
-    <ThemedView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <ThemedText type="title" style={styles.title}>
-          North Plus
-        </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Unlock your full financial picture
-        </ThemedText>
+    <AuroraBackground>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }
+        ]}
+      >
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <NorthStarIcon size={36} color={Colors.aurora.green} withGlow />
+          </View>
+          <ThemedText type="title" style={styles.title}>
+            North Star
+          </ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Unlock Total Financial Clarity.
+          </ThemedText>
+        </View>
 
         <View style={styles.features}>
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureIcon}>✓</ThemedText>
-            <View style={styles.featureContent}>
-              <ThemedText style={styles.featureTitle}>Full Category Breakdown</ThemedText>
-              <ThemedText style={styles.featureDescription}>
-                See every transaction categorized automatically
-              </ThemedText>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureIcon}>✓</ThemedText>
-            <View style={styles.featureContent}>
-              <ThemedText style={styles.featureTitle}>Recurring Subscriptions</ThemedText>
-              <ThemedText style={styles.featureDescription}>
-                Track and manage all your recurring payments
-              </ThemedText>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureIcon}>✓</ThemedText>
-            <View style={styles.featureContent}>
-              <ThemedText style={styles.featureTitle}>Month-to-Month Tracking</ThemedText>
-              <ThemedText style={styles.featureDescription}>
-                Compare spending patterns across months
-              </ThemedText>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureIcon}>✓</ThemedText>
-            <View style={styles.featureContent}>
-              <ThemedText style={styles.featureTitle}>Goals Progress</ThemedText>
-              <ThemedText style={styles.featureDescription}>
-                Track your savings goals with real-time progress
-              </ThemedText>
-            </View>
-          </View>
-
-          <View style={styles.featureItem}>
-            <ThemedText style={styles.featureIcon}>✓</ThemedText>
-            <View style={styles.featureContent}>
-              <ThemedText style={styles.featureTitle}>Smart Reminders</ThemedText>
-              <ThemedText style={styles.featureDescription}>
-                Get alerts for bills, goals, and spending patterns
-              </ThemedText>
-            </View>
-          </View>
+          <FeatureRow
+            icon="chart.pie"
+            title="Stop Wondering"
+            description="Know exactly where your money goes. No more fog."
+          />
+          <FeatureRow
+            icon="calendar"
+            title="Kill Hidden Costs"
+            description="Spot recurring subscriptions before they drain you."
+          />
+          <FeatureRow
+            icon="clock.arrow.circlepath"
+            title="Predict the Future"
+            description="See your financial trajectory months in advance."
+          />
+          <FeatureRow
+            icon="target"
+            title="Total Control"
+            description="You decide where every single dollar goes."
+          />
         </View>
 
         <View style={styles.buttonContainer}>
           <Pressable
-            style={styles.primaryButton}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed && styles.primaryButtonPressed
+            ]}
             onPress={handleCreateAccount}
           >
+            <LinearGradient
+              colors={[Colors.aurora.green, '#00D2FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
             <ThemedText style={styles.primaryButtonText}>
-              Create Account & Unlock
+              Begin Journey
             </ThemedText>
           </Pressable>
           <Pressable
@@ -90,100 +87,134 @@ export default function PaywallScreen() {
             onPress={handleBack}
           >
             <ThemedText style={styles.secondaryButtonText}>
-              Maybe Later
+              Not now
             </ThemedText>
           </Pressable>
         </View>
       </ScrollView>
-    </ThemedView>
+    </AuroraBackground>
+  );
+}
+
+function FeatureRow({ icon, title, description }: { icon: string, title: string, description: string }) {
+  return (
+    <View style={styles.featureItem}>
+      <View style={styles.featureIconContainer}>
+        <IconSymbol name={icon as any} size={24} color={Colors.aurora.cyan} />
+      </View>
+      <View style={styles.featureContent}>
+        <ThemedText style={styles.featureTitle}>{title}</ThemedText>
+        <ThemedText style={styles.featureDescription}>
+          {description}
+        </ThemedText>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 24,
-    paddingTop: 60,
+    paddingHorizontal: 32,
     alignItems: 'center',
   },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0, 255, 163, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 163, 0.2)',
+  },
   title: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '700',
     marginBottom: 12,
     textAlign: 'center',
+    color: Colors.aurora.text,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 18,
-    marginBottom: 40,
     textAlign: 'center',
-    opacity: 0.7,
+    color: Colors.aurora.muted,
+    fontWeight: '400',
   },
   features: {
     width: '100%',
     maxWidth: 400,
-    marginBottom: 40,
-    gap: 24,
+    marginBottom: 48,
+    gap: 32,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 16,
+    gap: 20,
   },
-  featureIcon: {
-    fontSize: 24,
-    color: '#007AFF',
-    fontWeight: '700',
+  featureIconContainer: {
     marginTop: 2,
   },
   featureContent: {
     flex: 1,
   },
   featureTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     marginBottom: 4,
-    opacity: 0.95,
+    color: Colors.aurora.text,
   },
   featureDescription: {
     fontSize: 15,
-    opacity: 0.7,
+    color: Colors.aurora.muted,
     lineHeight: 22,
   },
   buttonContainer: {
     width: '100%',
     maxWidth: 400,
-    gap: 16,
+    gap: 20,
   },
   primaryButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: Colors.aurora.green,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  primaryButtonPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
   },
   primaryButtonText: {
-    color: '#fff',
-    fontSize: 18,
+    color: '#000',
+    fontSize: 17,
     fontWeight: '600',
   },
   secondaryButton: {
-    backgroundColor: 'transparent',
-    paddingVertical: 18,
-    paddingHorizontal: 32,
-    borderRadius: 12,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#333',
+    justifyContent: 'center',
   },
   secondaryButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    opacity: 0.8,
+    color: Colors.aurora.muted,
   },
 });

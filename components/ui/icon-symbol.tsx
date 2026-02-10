@@ -21,6 +21,16 @@ const MAPPING = {
   'doc.fill': 'description',
   'flag.fill': 'flag',
   'person.fill': 'person',
+  'person.3.fill': 'groups',
+  'briefcase.fill': 'work',
+  'server.rack': 'dns',
+  'paintbrush.fill': 'brush',
+  'bubble.left.and.bubble.right.fill': 'forum',
+  'arrow.up': 'arrow-upward',
+  'sparkles': 'auto-awesome',
+  'checkmark.circle.fill': 'check-circle',
+  'exclamationmark.triangle.fill': 'warning',
+  'questionmark.circle.fill': 'help',
 } as IconMapping;
 
 /**

@@ -31,7 +31,7 @@ export async function readFileAsArrayBuffer(uri: string): Promise<ArrayBuffer> {
     // Decode base64 -> Uint8Array (Expo Go safe)
     // Use atob if available, otherwise decode manually
     let binaryString: string;
-    
+
     try {
       // FIX: Use globalThis.atob consistently (not bare atob which might not exist)
       if (typeof globalThis.atob === 'function') {
@@ -50,7 +50,7 @@ export async function readFileAsArrayBuffer(uri: string): Promise<ArrayBuffer> {
     if (!binaryString || binaryString.length === 0) {
       throw new Error("Base64 decoding produced empty result");
     }
-    
+
     // FIX: Create a proper ArrayBuffer (not a view into a larger buffer)
     // Convert binary string to Uint8Array, then create a new ArrayBuffer
     const len = binaryString.length;
@@ -58,12 +58,12 @@ export async function readFileAsArrayBuffer(uri: string): Promise<ArrayBuffer> {
     for (let i = 0; i < len; i++) {
       bytes[i] = binaryString.charCodeAt(i);
     }
-    
+
     // Create a new ArrayBuffer with the exact size (not a view)
     const arrayBuffer = new ArrayBuffer(bytes.length);
     const view = new Uint8Array(arrayBuffer);
     view.set(bytes);
-    
+
     return arrayBuffer;
   } catch (error) {
     // Enhanced error messages
@@ -90,43 +90,58 @@ function manualBase64Decode(base64: string): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
   let output = '';
   let i = 0;
-  
+
   // Clean base64 string (remove whitespace and invalid chars)
   const cleanedBase64 = base64.replace(/[^A-Za-z0-9\+\/\=]/g, '');
-  
+
   // Base64 length must be multiple of 4 (with padding)
   if (cleanedBase64.length % 4 !== 0) {
     throw new Error(`Invalid base64 length: ${cleanedBase64.length} (must be multiple of 4)`);
   }
-  
+
   while (i < cleanedBase64.length) {
     const enc1 = chars.indexOf(cleanedBase64.charAt(i++));
     const enc2 = chars.indexOf(cleanedBase64.charAt(i++));
     const enc3 = chars.indexOf(cleanedBase64.charAt(i++));
     const enc4 = chars.indexOf(cleanedBase64.charAt(i++));
-    
+
     // Validate indices (should be >= 0, except padding which is 64)
     if (enc1 < 0 || enc2 < 0 || enc3 < 0 || enc4 < 0) {
       throw new Error('Invalid base64 character detected');
     }
-    
+
     const chr1 = (enc1 << 2) | (enc2 >> 4);
     const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
     const chr3 = ((enc3 & 3) << 6) | enc4;
-    
+
     output += String.fromCharCode(chr1);
-    
+
     // Handle padding: if enc3 is padding (=), don't add chr2
     if (enc3 !== 64) {
       output += String.fromCharCode(chr2);
     }
-    
+
     // Handle padding: if enc4 is padding (=), don't add chr3
     if (enc4 !== 64) {
       output += String.fromCharCode(chr3);
     }
   }
-  
+
   return output;
+}
+
+/**
+ * Read file as plain text (UTF-8)
+ * Used for CSV parsing
+ */
+export async function readFileAsText(uri: string): Promise<string> {
+  try {
+    return await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+  } catch (error) {
+    console.error('Error reading file as text:', error);
+    throw new Error('Failed to read file contents');
+  }
 }
 

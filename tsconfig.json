@@ -30,5 +30,5 @@
     "node_modules",
     "supabase/functions/**/*"
   ],
-  "extends": "expo/tsconfig.base"
+  "extends": "expo/tsconfig.base.json"
 }
