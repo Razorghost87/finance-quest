@@ -1,0 +1,81 @@
+name: Agent Dispatcher
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *' # Every 10 minutes
+
+jobs:
+  dispatch:
+    name: Claim and Dispatch
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find Ready Issue
+        id: find_issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'agent:ready',
+              state: 'open'
+            });
+            if (issues.data.length > 0) {
+              return issues.data[0];
+            }
+            return null;
+
+      - name: Claim and Initialize
+        if: steps.find_issue.outputs.result != 'null'
+        env:
+          ISSUE_JSON: ${{ steps.find_issue.outputs.result }}
+        run: |
+          ISSUE_NUMBER=$(echo $ISSUE_JSON | jq -r '.number')
+          ISSUE_TITLE=$(echo $ISSUE_JSON | jq -r '.title')
+          SLUG=$(echo $ISSUE_TITLE | iconv -t ascii//TRANSLIT | sed -E 's/[^a-zA-Z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | tr A-Z a-z)
+          BRANCH_NAME="agent/${ISSUE_NUMBER}-${SLUG}"
+          RUN_ID="run-${{ github.run_id }}-${{ github.run_number }}"
+          
+          echo "Claiming issue #${ISSUE_NUMBER}"
+          
+          # Remove ready, add in-progress
+          gh issue edit $ISSUE_NUMBER --remove-label "agent:ready" --add-label "agent:in-progress"
+          
+          # Create branch
+          git checkout -b $BRANCH_NAME
+          
+          # Create run artifacts
+          mkdir -p runs/$RUN_ID/evidence runs/$RUN_ID/logs
+          echo "# Proposal for #${ISSUE_NUMBER}" > runs/$RUN_ID/proposal.md
+          echo "# Tasks for #${ISSUE_NUMBER}" > runs/$RUN_ID/tasks.md
+          echo "{\"issue\": $ISSUE_NUMBER, \"timestamp\": \"$(date -u +'%Y-%m-%dT%H:%M:%SZ')\"}" > runs/$RUN_ID/context.json
+          
+          # Prove the loop by updating DEV_AUTOMATION.md
+          sed -i "s/\*Last automated heartbeat:\*.*/\*Last automated heartbeat:\* $(date -u +'%Y-%m-%dT%H:%M:%SZ')/" docs/DEV_AUTOMATION.md
+          
+          # Commit and Push
+          git config user.name "North Agent"
+          git config user.email "agent@north.finance"
+          git add .
+          git commit -m "Claim issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}"
+          git push origin $BRANCH_NAME
+          
+          # Create PR
+          gh pr create \
+            --title "Agent solution for #${ISSUE_NUMBER}: ${ISSUE_TITLE}" \
+            --body "Automated PR for #${ISSUE_NUMBER}. See runs/$RUN_ID/ for details." \
+            --base main \
+            --head $BRANCH_NAME \
+            --label "agent:pr-open"
+        env:
+          GH_TOKEN: ${{ github.token }}
