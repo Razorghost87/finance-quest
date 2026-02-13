@@ -1,0 +1,100 @@
+name: "🤖 Agent Task (North)"
+description: "Create a structured task for the North agent automation (issue → PR → CI → auto-merge)."
+title: "[Agent] <short task title>"
+labels:
+  - "agent:ready"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## How this works
+        - When you submit this issue, the dispatcher will pick it up (label: **agent:ready**).
+        - It will open a PR on a new branch and run CI gates.
+        - If the task is **safe-to-merge**, add the **safe-to-merge** label after creating the issue.
+
+  - type: input
+    id: goal
+    attributes:
+      label: Goal (1 sentence)
+      description: "What should be true after this is done?"
+      placeholder: "Example: Improve dashboard spacing and typography for better readability."
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context / Notes
+      description: "Any background, links, screenshots, constraints."
+      placeholder: "Example: Keep Aurora style. Don’t change business logic. Focus on layout polish."
+    validations:
+      required: false
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Allowed file scope (IMPORTANT)
+      description: "List the files/folders the agent is allowed to touch. Be explicit."
+      placeholder: |
+        Example (LOW risk):
+        - app/(tabs)/index.tsx
+        - components/**
+        - docs/**
+    validations:
+      required: true
+
+  - type: textarea
+    id: forbidden
+    attributes:
+      label: Forbidden scope (optional)
+      description: "Extra forbidden paths for this task, if any."
+      placeholder: |
+        Example:
+        - supabase/**
+        - migrations/**
+        - app/processing.tsx
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (checklist)
+      description: "Clear conditions for done."
+      placeholder: |
+        - [ ] UI looks cleaner and spacing is consistent
+        - [ ] No behavior changes
+        - [ ] App builds successfully
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk level (guidance)
+      description: "LOW = UI/docs only. MEDIUM = new components/app flow. HIGH = backend/security/pipeline."
+      options:
+        - "LOW (UI/docs only — eligible for safe-to-merge)"
+        - "MEDIUM (new components/app flow — manual review recommended)"
+        - "HIGH (backend/security/pipeline — do NOT auto-merge)"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Auto-merge instructions
+        - If you selected **LOW**, after creating the issue add label: **safe-to-merge**
+        - If **MEDIUM/HIGH**, do NOT add safe-to-merge.
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: "I listed the allowed file scope clearly."
+          required: true
+        - label: "If this is LOW risk, I will add the safe-to-merge label."
+          required: false
+        - label: "I understand MEDIUM/HIGH tasks should not be auto-merged."
+          required: false
