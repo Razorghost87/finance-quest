@@ -1,0 +1,42 @@
+name: "🧱 Manual Review (MED/HIGH)"
+description: "For anything beyond UI/docs. No auto safe-to-merge label."
+title: "[REVIEW] <feature / fix>"
+labels:
+  - "agent:ready"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        🚫 **AUTO-MERGE DISABLED**
+        Use this when work might affect app logic, flow, backend, Supabase, or security.
+
+  - type: input
+    id: goal
+    attributes:
+      label: Goal
+      placeholder: "Example: Add new results grouping logic for merchants."
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Allowed file scope
+      placeholder: |
+        Example:
+        - app/results.tsx
+        - components/**
+        - lib/**
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Tests pass
+        - [ ] No regression in existing flow
+        - [ ] Reviewer can verify behavior
+    validations:
+      required: true
