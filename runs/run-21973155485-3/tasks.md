@@ -1,0 +1,4 @@
+- [x] Claim issue
+- [x] Create run artifacts
+- [x] Append line to docs/DEV_AUTOMATION.md
+- [x] Open PR
