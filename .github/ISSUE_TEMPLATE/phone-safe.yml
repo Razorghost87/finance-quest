@@ -1,0 +1,57 @@
+name: "📱 Phone Mode (SAFE → Auto-merge)"
+description: "Ultra-low friction. UI/docs only. Auto-labels safe-to-merge."
+title: "[SAFE] <what to change>"
+labels:
+  - "agent:ready"
+  - "safe-to-merge"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ✅ **AUTO SAFE-TO-MERGE ENABLED**
+        Use this only for **UI copy, styling, layout tweaks, docs**.
+        If you need logic/backend changes, use the **Manual Review** template instead.
+
+  - type: input
+    id: goal
+    attributes:
+      label: Goal
+      placeholder: "Example: Tighten dashboard spacing + improve typography hierarchy."
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Allowed files (keep small)
+      description: "List exact files/folders allowed."
+      placeholder: |
+        Example:
+        - app/(tabs)/index.tsx
+        - components/**
+        - docs/**
+    validations:
+      required: true
+
+  - type: textarea
+    id: change
+    attributes:
+      label: Exact change request
+      description: "Write what to do in plain English. Keep it small."
+      placeholder: |
+        Example:
+        - Increase top padding on dashboard cards
+        - Use consistent font sizes for headings
+        - Do not change any logic or data flow
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Safety confirmation (required)
+      options:
+        - label: "This is UI/docs-only (LOW risk). No backend, auth, Supabase, pipeline, or migrations."
+          required: true
+        - label: "Allowed file scope is correct and minimal."
+          required: true
