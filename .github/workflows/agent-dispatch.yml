@@ -1,9 +1,13 @@
 name: Agent Dispatcher
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *" # Every 5 minutes (24/7)
+
+# Prevent overlapping runs (important when running frequently)
+concurrency:
+  group: agent-dispatch
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -121,7 +125,7 @@ jobs:
             const head = process.env.BRANCH;
             const base = "main";
 
-            // Check safe-to-merge on the issue
+            // Read issue labels (gate auto-merge)
             const issue = await github.rest.issues.get({ owner, repo, issue_number });
             const issueLabels = (issue.data.labels || []).map(l => (typeof l === "string" ? l : l.name));
             const isSafeToMerge = issueLabels.includes("safe-to-merge");
@@ -133,7 +137,7 @@ jobs:
               title: `Agent PR: issue #${issue_number}`,
               head,
               base,
-              body: `Automated PR for issue #${issue_number}.\nRun artifacts: runs/${process.env.RUN_ID}/`,
+              body: `Automated PR for issue #${issue_number}.\n\nCloses #${issue_number}\n\nRun artifacts: runs/${process.env.RUN_ID}/`,
             });
 
             // Label issue: PR opened
@@ -159,4 +163,4 @@ jobs:
               core.info("Auto-merge not enabled (missing safe-to-merge).");
             }
 
-            core.info(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
+            core.info(\`Created PR #\${pr.data.number}: \${pr.data.html_url}\`);
