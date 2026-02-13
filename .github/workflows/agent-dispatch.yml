@@ -13,6 +13,7 @@ permissions:
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+
     steps:
       - name: Find oldest ready issue
         id: find
@@ -55,9 +56,8 @@ jobs:
             const { owner, repo } = context.repo;
             const issue_number = Number("${{ steps.find.outputs.number }}");
 
-            // Remove agent:ready, add agent:in-progress
             await github.rest.issues.removeLabel({ owner, repo, issue_number, name: "agent:ready" })
-              .catch(() => {}); // label might already be removed
+              .catch(() => {});
 
             await github.rest.issues.addLabels({
               owner,
@@ -74,7 +74,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Create a safe slug without extra dependencies
           SLUG=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g' | sed -E 's/^-+|-+$//g' | cut -c1-40)
           BRANCH="agent/${ISSUE_NUMBER}-${SLUG}"
           RUN_ID="run-${GITHUB_RUN_ID}-${GITHUB_RUN_NUMBER}"
@@ -112,7 +111,7 @@ jobs:
           git commit -m "agent: issue #$ISSUE_NUMBER safe-mode proof"
           git push -u origin "$BRANCH"
 
-      - name: Open PR + label issue
+      - name: Open PR + label issue + enable auto-merge (safe-to-merge only)
         if: steps.find.outputs.found == 'true'
         uses: actions/github-script@v7
         with:
@@ -121,6 +120,11 @@ jobs:
             const issue_number = Number("${{ steps.find.outputs.number }}");
             const head = process.env.BRANCH;
             const base = "main";
+
+            // Check safe-to-merge on the issue
+            const issue = await github.rest.issues.get({ owner, repo, issue_number });
+            const issueLabels = (issue.data.labels || []).map(l => (typeof l === "string" ? l : l.name));
+            const isSafeToMerge = issueLabels.includes("safe-to-merge");
 
             // Create PR
             const pr = await github.rest.pulls.create({
@@ -132,12 +136,27 @@ jobs:
               body: `Automated PR for issue #${issue_number}.\nRun artifacts: runs/${process.env.RUN_ID}/`,
             });
 
-            // Add agent:pr-open label to issue
+            // Label issue: PR opened
             await github.rest.issues.addLabels({
               owner,
               repo,
               issue_number,
               labels: ["agent:pr-open"],
             });
+
+            // Enable auto-merge only for safe-to-merge
+            if (isSafeToMerge) {
+              const mutation = `
+                mutation EnableAutoMerge($pullRequestId: ID!) {
+                  enablePullRequestAutoMerge(input: { pullRequestId: $pullRequestId, mergeMethod: MERGE }) {
+                    pullRequest { number }
+                  }
+                }
+              `;
+              await github.graphql(mutation, { pullRequestId: pr.data.node_id });
+              core.info("Auto-merge enabled (safe-to-merge).");
+            } else {
+              core.info("Auto-merge not enabled (missing safe-to-merge).");
+            }
 
             core.info(`Created PR #${pr.data.number}: ${pr.data.html_url}`);
