@@ -1,0 +1,53 @@
+name: Issue Lifecycle Cleaner
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  clean_labels:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract closed issue numbers from PR body
+        id: extract
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.pull_request.body || "";
+            // Match: Closes #123, Close #123, Fixes #123, Resolves #123 (case-insensitive)
+            const regex = /\b(?:close[sd]?|fixe[sd]?|resolve[sd]?)\s+#(\d+)\b/gi;
+            const issues = new Set();
+            let match;
+            while ((match = regex.exec(body)) !== null) {
+              issues.add(Number(match[1]));
+            }
+            core.setOutput("issues", JSON.stringify([...issues]));
+
+      - name: Update issue labels (remove in-progress/pr-open, add done)
+        if: steps.extract.outputs.issues != '[]'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const issues = JSON.parse(`${{ steps.extract.outputs.issues }}`);
+
+            for (const issue_number of issues) {
+              // Remove labels if they exist
+              await github.rest.issues.removeLabel({ owner, repo, issue_number, name: "agent:in-progress" })
+                .catch(() => {});
+              await github.rest.issues.removeLabel({ owner, repo, issue_number, name: "agent:pr-open" })
+                .catch(() => {});
+
+              // Add done label
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number,
+                labels: ["agent:done"],
+              });
+            }
