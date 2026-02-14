@@ -1,0 +1,56 @@
+name: EAS Preview Build (PR)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: eas-preview-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Trigger EAS preview build (non-blocking)
+        run: |
+          eas build --profile preview --platform all --non-interactive --no-wait
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: [
+                "📱 **EAS preview build triggered**",
+                "",
+                "A preview build was queued for **iOS + Android**.",
+                "Open Expo dashboard → **Builds** to install the latest.",
+                "",
+                "Next upgrade (recommended): auto-post direct install links into this PR."
+              ].join("\n")
+            });
